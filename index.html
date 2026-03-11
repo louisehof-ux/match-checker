@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Match Checker</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, sans-serif; }
+body { min-height: 100vh; background: linear-gradient(135deg, #f5f0ff, #fff0f5); padding: 16px; }
+.wrap { max-width: 680px; margin: 0 auto; }
+.center { display: flex; align-items: center; justify-content: center; min-height: 100vh; }
+.box { background: #fff; border-radius: 20px; padding: 32px; width: 100%; max-width: 340px; box-shadow: 0 2px 12px rgba(0,0,0,.08); }
+.card { background: #fff; border-radius: 20px; padding: 20px; margin-bottom: 14px; box-shadow: 0 2px 8px rgba(0,0,0,.05); }
+h1 { color: #5b21b6; font-size: 20px; }
+.lbl { font-size: 11px; font-weight: 700; color: #9ca3af; text-transform: uppercase; letter-spacing: .05em; margin-bottom: 10px; display: block; }
+input, select { width: 100%; border: 1px solid #e5e7eb; border-radius: 10px; padding: 8px 12px; font-size: 13px; color: #374151; outline: none; margin-bottom: 8px; }
+input:focus, select:focus { border-color: #a78bfa; }
+.row { display: flex; gap: 8px; }
+.row input, .row select { margin-bottom: 0; }
+.btn { border: none; border-radius: 10px; padding: 9px 16px; font-size: 13px; font-weight: 600; cursor: pointer; }
+.btn-p { background: #7c3aed; color: #fff; }
+.btn-p:disabled { opacity: .4; }
+.btn-r { background: #fee2e2; color: #dc2626; padding: 5px 10px; font-size: 12px; }
+.btn-g { background: #f3f4f6; color: #6b7280; padding: 5px 10px; font-size: 12px; }
+.btn-w { width: 100%; margin-top: 10px; padding: 11px; }
+.tabs { display: flex; gap: 4px; background: #f3f4f6; border-radius: 14px; padding: 4px; margin-bottom: 14px; }
+.tab { flex: 1; border: none; background: none; border-radius: 10px; padding: 8px 2px; font-size: 12px; font-weight: 500; color: #9ca3af; cursor: pointer; }
+.tab.on { background: #fff; color: #7c3aed; box-shadow: 0 1px 4px rgba(0,0,0,.08); }
+.hdr { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+.pr { display: flex; align-items: center; justify-content: space-between; border: 1px solid #f3f4f6; border-radius: 12px; padding: 10px 12px; margin-bottom: 6px; }
+.pr.w { border-color: #fed7aa; background: #fff7ed; }
+.pn { font-weight: 600; font-size: 14px; }
+.pm { font-size: 12px; color: #9ca3af; }
+.bdg { display: inline-block; border-radius: 20px; padding: 2px 7px; font-size: 11px; font-weight: 600; margin-left: 4px; }
+.bg { background: #d1fae5; color: #065f46; }
+.br { background: #fee2e2; color: #991b1b; }
+.bo { background: #ffedd5; color: #9a3412; }
+.mtags { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; }
+.mt { background: #ede9fe; color: #5b21b6; border-radius: 20px; padding: 2px 7px; font-size: 11px; }
+.mt.w { background: #ffedd5; color: #9a3412; }
+.stats { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; }
+.st { flex: 1; min-width: 70px; border-radius: 14px; padding: 12px; text-align: center; }
+.sv { font-size: 22px; font-weight: 700; }
+.sl { font-size: 11px; color: #6b7280; }
+.sp { background: #f5f3ff; } .sp .sv { color: #7c3aed; }
+.sg { background: #f0fdf4; } .sg .sv { color: #16a34a; }
+.so { background: #fff7ed; } .so .sv { color: #ea580c; }
+.sk { background: #fdf2f8; } .sk .sv { color: #db2777; }
+.ac { border: 1px solid #fed7aa; background: #fff7ed; border-radius: 14px; padding: 14px; margin-bottom: 10px; }
+.at { font-size: 13px; font-weight: 700; color: #c2410c; margin-bottom: 6px; }
+.ai { font-size: 12px; color: #78350f; margin-top: 4px; }
+.err { color: #dc2626; font-size: 12px; margin-top: 6px; }
+.empty { text-align: center; color: #9ca3af; padding: 28px 0; font-size: 13px; }
+.srow { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 8px; }
+.srow label { font-size: 13px; color: #374151; min-width: 160px; }
+input[type=range] { accent-color: #7c3aed; flex: 1; min-width: 80px; margin-bottom: 0; }
+.sv2 { font-weight: 700; color: #7c3aed; min-width: 44px; }
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script>
+var _sb = supabase.createClient(
+  "https://xhzfjnuxkrmunqlrzhsj.supabase.co",
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhoemZqbnV4a3JtdW5xbHJ6aHNqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMyMjQ1ODYsImV4cCI6MjA4ODgwMDU4Nn0.kQgCGqnwv2BDHM-NuFFbIFjZ91XIDkQuNZ4N9XAGuPY"
+);
+
+var G = ["Man","Vrouw","Non-binair"];
+var LF = ["Man","Vrouw","Non-binair","Mens (iedereen)"];
+var s = {
+  session:null, loading:true, parts:[], maxAge:10, minM:2,
+  tab:"deelnemers", done:false, results:[],
+  np:{naam:"",leeftijd:"",gender:"",zoekt:"",evenement:"",datum:""},
+  saving:false, email:"", pw:"", lerr:"", lloading:false
+};
+
+function match(a,b) {
+  if (!a.naam||!b.naam||!a.gender||!b.gender||!a.zoekt||!b.zoekt) return false;
+  if (a.id===b.id) return false;
+  if (a.leeftijd&&b.leeftijd&&Math.abs(a.leeftijd-b.leeftijd)>s.maxAge) return false;
+  return (a.zoekt==="Mens (iedereen)"||a.zoekt===b.gender)&&(b.zoekt==="Mens (iedereen)"||b.zoekt===a.gender);
+}
+
+function doAnalyse() {
+  s.results = s.parts.map(function(p) {
+    var m = s.parts.filter(function(o) { return match(p,o); });
+    return {id:p.id,naam:p.naam,leeftijd:p.leeftijd,gender:p.gender,zoekt:p.zoekt,matches:m,hasMatch:m.length>0};
+  });
+  s.done = true;
+}
+
+function advice() {
+  return s.results.filter(function(r) { return r.matches.length<s.minM; }).map(function(p) {
+    var cg = G.filter(function(g) { return p.zoekt==="Mens (iedereen)"||p.zoekt===g; });
+    var ar = p.leeftijd ? {min:Math.max(18,p.leeftijd-s.maxAge),max:p.leeftijd+s.maxAge} : null;
+    return {naam:p.naam,gender:p.gender,zoekt:p.zoekt,needed:s.minM-p.matches.length,cg:cg,ar:ar};
+  });
+}
+
+function load() {
+  _sb.from("deelnemers").select("*").order("naam").then(function(r) {
+    s.parts = r.data||[];
+    if (s.done) doAnalyse();
+    render();
+  });
+}
+
+function save() {
+  var p=s.np;
+  if (!p.naam||!p.gender||!p.zoekt) return;
+  s.saving=true; render();
+  _sb.from("deelnemers").insert([{
+    naam:p.naam,
+    leeftijd:p.leeftijd?parseInt(p.leeftijd):null,
+    gender:p.gender,zoekt:p.zoekt,
+    evenement:p.evenement||null,
+    datum:p.datum||null
+  }]).then(function() {
+    s.np={naam:"",leeftijd:"",gender:"",zoekt:"",evenement:"",datum:""};
+    s.saving=false; load();
+  });
+}
+
+function del(id) {
+  _sb.from("deelnemers").delete().eq("id",id).then(function(){load();});
+}
+
+function login() {
+  s.lloading=true; s.lerr=""; render();
+  _sb.auth.signInWithPassword({email:s.email,password:s.pw}).then(function(r) {
+    if (r.error) { s.lerr="Inloggen mislukt. Controleer je gegevens."; s.lloading=false; render(); }
+  });
+}
+
+function logout() {
+  _sb.auth.signOut().then(function() { s.session=null; s.parts=[]; s.done=false; render(); });
+}
+
+function opts(arr,sel) {
+  var h="";
+  for (var i=0;i<arr.length;i++) {
+    h+='<option value="'+arr[i]+'"'+(sel===arr[i]?' selected':'')+'>'+arr[i]+'</option>';
+  }
+  return h;
+}
+
+function renderLogin() {
+  document.getElementById("app").innerHTML =
+    '<div class="center"><div class="box">' +
+    '<div style="text-align:center;font-size:36px">&#128156;</div>' +
+    '<h1 style="text-align:center;margin:8px 0 4px">Match Checker</h1>' +
+    '<p style="text-align:center;color:#9ca3af;font-size:13px;margin-bottom:18px">Inloggen als organisator</p>' +
+    '<input type="email" placeholder="E-mailadres" oninput="s.email=this.value" />' +
+    '<input type="password" placeholder="Wachtwoord" oninput="s.pw=this.value" onkeydown="if(event.key===\'Enter\')login()" />' +
+    (s.lerr?'<p class="err">'+s.lerr+'</p>':'') +
+    '<button class="btn btn-p btn-w" onclick="login()">'+(s.lloading?'Bezig...':'Inloggen')+'</button>' +
+    '</div></div>';
+}
+
+function tabDeel() {
+  var p=s.np;
+  var list="";
+  for (var i=0;i<s.parts.length;i++) {
+    var d=s.parts[i];
+    list+='<div class="pr"><div><div class="pn">'+d.naam+'</div>' +
+      '<div class="pm">'+(d.leeftijd?d.leeftijd+' jr - ':'')+d.gender+' - zoekt '+d.zoekt+'</div></div>' +
+      '<button class="btn btn-r" onclick="del(\''+d.id+'\')">x</button></div>';
+  }
+  return '<div class="card"><span class="lbl">Deelnemer toevoegen</span>' +
+    '<input placeholder="Naam" oninput="s.np.naam=this.value" />' +
+    '<div class="row">' +
+    '<input type="number" placeholder="Leeftijd" min="18" max="99" oninput="s.np.leeftijd=this.value" />' +
+    '<select onchange="s.np.gender=this.value"><option value="">Gender...</option>'+opts(G,p.gender)+'</select></div>' +
+    '<div class="row">' +
+    '<select onchange="s.np.zoekt=this.value"><option value="">Zoekt...</option>'+opts(LF,p.zoekt)+'</select>' +
+    '<input placeholder="Evenement" oninput="s.np.evenement=this.value" /></div>' +
+    '<input type="date" oninput="s.np.datum=this.value" />' +
+    '<button class="btn btn-p" onclick="save()" '+(s.saving||!p.naam||!p.gender||!p.zoekt?'disabled':'')+'>' +
+    (s.saving?'Opslaan...':'+ Toevoegen')+'</button></div>' +
+    '<div class="card"><span class="lbl">Deelnemerslijst ('+s.parts.length+')</span>' +
+    (s.parts.length===0?'<div class="empty">Nog geen deelnemers.</div>':list) +
+    (s.parts.length>1?'<button class="btn btn-p btn-w" onclick="doAnalyse();s.tab=\'analyse\';render()">&#9654; Analyseer groep</button>':'') +
+    '</div>';
+}
+
+function tabAnalyse() {
+  if (!s.done) return '<div class="card"><div class="empty"><p>Klik op Analyseer groep.</p>' +
+    '<button class="btn btn-p" style="margin-top:10px" onclick="doAnalyse();render()">Analyseer groep</button></div></div>';
+  var r=s.results, below=0, nomatch=0, total=0;
+  for (var i=0;i<r.length;i++) {
+    total+=r[i].matches.length;
+    if (r[i].hasMatch&&r[i].matches.length<s.minM) below++;
+    if (!r[i].hasMatch) nomatch++;
+  }
+  var avg=r.length?(total/r.length).toFixed(1):0;
+  var rows="";
+  for (var j=0;j<r.length;j++) {
+    var d=r[j], warn=d.matches.length<s.minM, tags="";
+    for (var k=0;k<d.matches.length;k++) {
+      var m=d.matches[k];
+      tags+='<span class="mt'+(warn?' w':'')+'">'+m.naam+(m.leeftijd?' ('+m.leeftijd+'jr, '+m.gender+')':'('+m.gender+')')+'</span>';
+    }
+    rows+='<div class="pr'+(warn?' w':'')+'"><div style="flex:1">' +
+      '<div><span class="pn">'+d.naam+'</span>' +
+      '<span class="bdg '+(d.matches.length>=s.minM?'bg':'bo')+'">'+d.matches.length+' matches</span>' +
+      '<span class="bdg '+(d.hasMatch?'bg':'br')+'">'+(d.hasMatch?'Match':'Geen match')+'</span></div>' +
+      '<div class="pm">'+(d.leeftijd?d.leeftijd+' jr - ':'')+d.gender+' - zoekt '+d.zoekt+'</div>' +
+      (d.hasMatch?'<div class="mtags">'+tags+'</div>':'')+'</div></div>';
+  }
+  return '<div class="card">' +
+    '<div class="stats">' +
+    '<div class="st sp"><div class="sv">'+r.length+'</div><div class="sl">Deelnemers</div></div>' +
+    '<div class="st sg"><div class="sv">'+r.filter(function(x){return x.matches.length>=s.minM;}).length+'</div><div class="sl">Voldoende</div></div>' +
+    '<div class="st so"><div class="sv">'+(below+nomatch)+'</div><div class="sl">Onder drempel</div></div>' +
+    '<div class="st sk"><div class="sv">'+avg+'</div><div class="sl">Gem. matches</div></div>' +
+    '</div>'+rows+'</div>';
+}
+
+function tabAdvies() {
+  if (!s.done) return '<div class="card"><div class="empty"><p>Voer eerst een analyse uit.</p>' +
+    '<button class="btn btn-p" style="margin-top:10px" onclick="doAnalyse();s.tab=\'analyse\';render()">Analyseer groep</button></div></div>';
+  var adv=advice();
+  if (adv.length===0) return '<div class="card"><div class="empty">' +
+    '<div style="font-size:32px;margin-bottom:8px">&#127881;</div>' +
+    '<p style="font-weight:600;color:#16a34a">Groep is in balans!</p>' +
+    '<p style="margin-top:6px">Iedereen heeft minimaal '+s.minM+' matches.</p></div></div>';
+  var cards="";
+  for (var i=0;i<adv.length;i++) {
+    var a=adv[i], items="";
+    for (var j=0;j<a.cg.length;j++) {
+      items+='<div class="ai">&#8594; Gender: '+a.cg[j]+' - zoekt '+a.gender+' of Mens (iedereen)'+(a.ar?' - leeftijd '+a.ar.min+'-'+a.ar.max+' jr':' - voeg leeftijd toe')+'</div>';
+    }
+    cards+='<div class="ac"><div class="at">Voor '+a.naam+' ('+a.gender+', zoekt '+a.zoekt+')</div>' +
+      '<div style="font-size:13px;color:#92400e;margin-bottom:4px">Werf '+a.needed+' deelnemer'+(a.needed>1?'s':'')+':</div>'+items+'</div>';
+  }
+  return '<div class="card"><span class="lbl">Wervingsadvies</span>'+cards+'</div>';
+}
+
+function render() {
+  var app=document.getElementById("app");
+  if (s.loading) { app.innerHTML='<div class="center" style="color:#7c3aed;font-weight:600">Laden...</div>'; return; }
+  if (!s.session) { renderLogin(); return; }
+  var content="";
+  if (s.tab==="deelnemers") content=tabDeel();
+  else if (s.tab==="analyse") content=tabAnalyse();
+  else content=tabAdvies();
+  app.innerHTML='<div class="wrap">' +
+    '<div class="hdr">' +
+    '<div style="display:flex;align-items:center;gap:8px"><span style="font-size:22px">&#128156;</span><h1>Match Checker</h1></div>' +
+    '<button class="btn btn-g" onclick="logout()">Uitloggen</button></div>' +
+    '<div class="card"><span class="lbl">Instellingen</span>' +
+    '<div class="srow"><label>Max. leeftijdsverschil</label>' +
+    '<input type="range" min="1" max="30" value="'+s.maxAge+'" oninput="s.maxAge=+this.value;s.done=false;render()" />' +
+    '<span class="sv2">+/- '+s.maxAge+' jr</span></div>' +
+    '<div class="srow"><label>Min. matches per deelnemer</label>' +
+    '<input type="range" min="1" max="10" value="'+s.minM+'" oninput="s.minM=+this.value;s.done=false;render()" />' +
+    '<span class="sv2">'+s.minM+'</span></div></div>' +
+    '<div class="tabs">' +
+    '<button class="tab'+(s.tab==="deelnemers"?" on":"")+'" onclick="s.tab=\'deelnemers\';render()">&#128101; Deelnemers</button>' +
+    '<button class="tab'+(s.tab==="analyse"?" on":"")+'" onclick="s.tab=\'analyse\';render()">&#128202; Analyse</button>' +
+    '<button class="tab'+(s.tab==="advies"?" on":"")+'" onclick="s.tab=\'advies\';render()">&#128161; Advies</button>' +
+    '</div>'+content+'</div>';
+}
+
+_sb.auth.getSession().then(function(r) {
+  s.session=r.data.session; s.loading=false;
+  if (s.session) load(); else render();
+});
+_sb.auth.onAuthStateChange(function(e,session) {
+  s.session=session;
+  if (session) load(); else { s.parts=[]; render(); }
+});
+</script>
+</body>
+</html>
